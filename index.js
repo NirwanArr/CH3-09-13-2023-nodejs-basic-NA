@@ -32,29 +32,70 @@ const url = require('url');
 // });
 // console.log('hai FSW2');
 
+const replaceTemplate = (template, product) => {
+    let output = template.replace(/{%PRODUCTNAME%}/g, product.productName);
+    output = output.replace(/{%IMAGE%}/g, product.image);
+    output = output.replace(/{%QUANTITY%}/g, product.quantity);
+    output = output.replace(/{%PRICE%}/g, product.price);
+    output = output.replace(/{%DESCRIPTION%}/g, product.description);
+    output = output.replace(/{%NUTRIENTS%}/g, product.nutrients);
+    output = output.replace(/{%FROM%}/g, product.from);
+    output = output.replace(/{%ID%}/g, product.id);
+
+    if (!product.organic) output = output.replace(/{%NOT_ORGANIC%}/g, 'not-organic');
+
+    return output;
+};
+const data = fs.readFileSync(`${__dirname}/dev-data/data.json`, 'utf-8');
+const dataObj = JSON.parse(data);
+
+const overviewPage = fs.readFileSync(`${__dirname}/templates/overview.html`, 'utf-8');
+const productTemplate = fs.readFileSync(`${__dirname}/templates/product.html`, 'utf-8');
+const productCardTemplate = fs.readFileSync(`${__dirname}/templates/template-card.html`, 'utf-8');
+
 // Server dengan HTTP
 const server = http.createServer((req, res) => {
-    const pathName = req.url;
+    // const pathName = req.url;
+    const { pathname: pathName, query } = url.parse(req.url, true);
 
+    // HELLO PAGE
     if (pathName === '/hello') {
         res.end('ini hello ke FSW 2');
-    } else if (pathName === '/product') {
-        res.end(JSON.stringify({
-            data: 'ini product',
-        }));
-    } else if (pathName === '/api') {
-        const data = fs.readFileSync(`${__dirname}/dev-data/data.json`);
+
+        // Product oage
+    }
+
+    // simple api
+    else if (pathName === '/api') {
         res.writeHead(200, {
             'Content-type': 'application/json'
         });
         res.end(data);
+
+        // overview page
     } else if (pathName === '/overview') {
-        const overviewPage = fs.readFileSync(`${__dirname}/templates/overview.html`);
         res.writeHead(200, {
             'Content-type': 'text/html'
         });
-        res.end(overviewPage);
-    } else {
+
+        const productCardHtml = dataObj.map(el => replaceTemplate(productCardTemplate, el));
+        const output = overviewPage.replace('{%PRODUCT_CARDS%}', productCardHtml);
+
+        res.end(output);
+
+        // Product page
+    } else if (pathName === '/product') {
+        // console.log(query);
+        res.writeHead(200, {
+            'Content-type': 'text/html'
+        });
+        const product = dataObj[query.id];
+        const output = replaceTemplate(productTemplate, product);
+        res.end(output);
+
+
+    }
+    else {
         res.writeHead(404, {
             'Content-type': 'text/html'
         });
